@@ -152,3 +152,107 @@ def test_download_multiple(mock_download_data, mock_executor, tmp_path):
     successful = mritk.datasets.download_multiple(urls, tmp_path)
 
     assert len(successful) == 2
+
+
+# --- Tests for filter_links_by_subset ---
+
+
+@pytest.fixture
+def sample_links():
+    return {
+        "README.md": "http://example.com/README.md",
+        "mesh-data.zip": "http://example.com/mesh-data.zip",
+        "archive.zip": "http://example.com/archive.zip",
+    }
+
+
+def test_filter_links_exact_match(sample_links):
+    """Exact filename (with extension) should match correctly."""
+    result = mritk.datasets.filter_links_by_subset(sample_links, ["README.md"])
+    assert result == {"README.md": sample_links["README.md"]}
+
+
+def test_filter_links_stem_match(sample_links):
+    """Filename without extension should match the full filename."""
+    result = mritk.datasets.filter_links_by_subset(sample_links, ["README"])
+    assert result == {"README.md": sample_links["README.md"]}
+
+
+def test_filter_links_stem_match_zip(sample_links):
+    """Stem of a zip file should match the full filename."""
+    result = mritk.datasets.filter_links_by_subset(sample_links, ["mesh-data"])
+    assert result == {"mesh-data.zip": sample_links["mesh-data.zip"]}
+
+
+def test_filter_links_multiple_subsets(sample_links):
+    """Multiple subsets (mixed exact and stem) should all be resolved."""
+    result = mritk.datasets.filter_links_by_subset(sample_links, ["README.md", "mesh-data"])
+    assert result == {
+        "README.md": sample_links["README.md"],
+        "mesh-data.zip": sample_links["mesh-data.zip"],
+    }
+
+
+def test_filter_links_missing_subset_returns_none(sample_links, caplog):
+    """A subset that does not exist should return None and log an error."""
+    result = mritk.datasets.filter_links_by_subset(sample_links, ["nonexistent"])
+    assert result is None
+    assert "nonexistent" in caplog.text
+
+
+def test_filter_links_partial_missing_returns_none(sample_links, caplog):
+    """If even one subset is missing, nothing should be downloaded (return None)."""
+    result = mritk.datasets.filter_links_by_subset(sample_links, ["README", "nonexistent"])
+    assert result is None
+    assert "nonexistent" in caplog.text
+
+
+# --- Tests for dispatch with --subset ---
+
+
+@patch("mritk.datasets.get_datasets")
+@patch("mritk.datasets.download_multiple")
+def test_dispatch_download_with_subset_stem(mock_download_multiple, mock_get_datasets, mock_datasets):
+    """--subset with stem only should filter links and call download_multiple."""
+    mock_get_datasets.return_value = mock_datasets
+
+    mritk.cli.main(["datasets", "download", "test-data", "-o", "/tmp", "--subset", "file1"])
+
+    expected_links = {"file1.txt": mock_datasets["test-data"].links["file1.txt"]}
+    mock_download_multiple.assert_called_once_with(expected_links, Path("/tmp"))
+
+
+@patch("mritk.datasets.get_datasets")
+@patch("mritk.datasets.download_multiple")
+def test_dispatch_download_with_subset_exact(mock_download_multiple, mock_get_datasets, mock_datasets):
+    """--subset with exact filename should filter links correctly."""
+    mock_get_datasets.return_value = mock_datasets
+
+    mritk.cli.main(["datasets", "download", "test-data", "-o", "/tmp", "--subset", "file1.txt"])
+
+    expected_links = {"file1.txt": mock_datasets["test-data"].links["file1.txt"]}
+    mock_download_multiple.assert_called_once_with(expected_links, Path("/tmp"))
+
+
+@patch("mritk.datasets.get_datasets")
+@patch("mritk.datasets.download_multiple")
+def test_dispatch_download_with_multiple_subsets(mock_download_multiple, mock_get_datasets, mock_datasets):
+    """Multiple --subset flags should download only the requested files."""
+    mock_get_datasets.return_value = mock_datasets
+
+    mritk.cli.main(["datasets", "download", "test-data", "-o", "/tmp", "--subset", "file1", "--subset", "archive"])
+
+    expected_links = mock_datasets["test-data"].links  # both files
+    mock_download_multiple.assert_called_once_with(expected_links, Path("/tmp"))
+
+
+@patch("mritk.datasets.get_datasets")
+@patch("mritk.datasets.download_multiple")
+def test_dispatch_download_subset_not_found(mock_download_multiple, mock_get_datasets, mock_datasets, caplog):
+    """If a --subset does not exist, download_multiple must NOT be called."""
+    mock_get_datasets.return_value = mock_datasets
+
+    mritk.cli.main(["datasets", "download", "test-data", "-o", "/tmp", "--subset", "does-not-exist"])
+
+    mock_download_multiple.assert_not_called()
+    assert "does-not-exist" in caplog.text

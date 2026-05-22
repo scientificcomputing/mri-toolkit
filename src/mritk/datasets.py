@@ -213,6 +213,17 @@ def add_arguments(
         help=f"Dataset to download (choices: {', '.join(choices)})",
     )
     download_parser.add_argument("-o", "--outdir", type=Path, help="Output directory to download test data")
+    download_parser.add_argument(
+        "--subset",
+        action="append",
+        metavar="STR",
+        default=None,
+        dest="subset",
+        help=(
+            "Download only a subset of files. Can be specified multiple times. "
+            "Accepts filenames with or without extension (e.g. README or README.md)."
+        ),
+    )
 
     subparsers.add_parser("list", help="List available datasets")
     info_parser = subparsers.add_parser("info", help="Show detailed information about a dataset")
@@ -227,6 +238,37 @@ def add_arguments(
         extra_args_cb(info_parser)
 
 
+def filter_links_by_subset(links: dict[str, str], subsets: list[str]) -> dict[str, str] | None:
+    """Filter a links dict to only include entries matching the requested subsets.
+
+    Each subset entry is matched by exact filename or by stem (filename without extension).
+    Returns the filtered dict, or None if any subset could not be matched.
+    """
+    # Build a stem -> filename mapping for efficient lookup
+    stem_to_filename: dict[str, str] = {Path(k).stem: k for k in links}
+
+    filtered: dict[str, str] = {}
+    missing: list[str] = []
+
+    for subset in subsets:
+        if subset in links:
+            # Exact match (e.g. "README.md")
+            filtered[subset] = links[subset]
+        elif Path(subset).stem in stem_to_filename:
+            # Stem match (e.g. "README" -> "README.md", "mesh-data" -> "mesh-data.zip")
+            key = stem_to_filename[Path(subset).stem]
+            filtered[key] = links[key]
+        else:
+            missing.append(subset)
+
+    if missing:
+        available = ", ".join(links.keys())
+        logger.error(f"The following subset(s) were not found: {', '.join(missing)}. Available files: {available}")
+        return None
+
+    return filtered
+
+
 def dispatch(args):
     subcommand = args.pop("datasets-command", None)
     if subcommand == "list":
@@ -234,6 +276,7 @@ def dispatch(args):
     elif subcommand == "download":
         dataset = args.pop("dataset")
         outdir = args.pop("outdir")
+        subsets = args.pop("subset", None)
         if outdir is None:
             logger.error("Output directory (-o or --outdir) is required for downloading datasets.")
             return
@@ -244,6 +287,12 @@ def dispatch(args):
             return
 
         links = datasets[dataset].links
+
+        if subsets is not None:
+            links = filter_links_by_subset(links, subsets)
+            if links is None:
+                return
+
         download_multiple(links, outdir)
 
     elif subcommand == "info":
