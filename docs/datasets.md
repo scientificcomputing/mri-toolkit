@@ -37,3 +37,8 @@ mritk datasets download <dataset_name> -o /path/to/download
 ```
 
 ![data](https://github.com/user-attachments/assets/7e35f2d8-ca97-42e7-b9b9-3b609ba5148f)
+
+It is also possible to only download a subset of a dataset using the `--subset` flag. For example if you only want to download the `surfaces` and `mesh-data` from the `gonzo` dataset you can do
+```bash
+mritk datasets download gonzo -o gonzo-data --subset surfaces.zip --subset mesh-data.zip
+```
