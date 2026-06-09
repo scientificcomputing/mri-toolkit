@@ -1,13 +1,20 @@
-# MRI-Toolkit
+# mri-toolkit
 
-`MRI-toolkit` provides a set of features dedicated to MRI data post-processing and analysis.
+`mri-toolkit` provides a set of features dedicated to MRI data post-processing and analysis.
 
-The implementation is inspired by [gMRI2FEM](https://github.com/jorgenriseth/gMRI2FEM), and some of the code is taken from that project. However, `MRI-toolkit` is designed to be more modular and extensible, with a focus on providing a user-friendly command-line interface (CLI) for common MRI processing tasks.
+The implementation is inspired by [gMRI2FEM](https://github.com/jorgenriseth/gMRI2FEM), and some of the code is taken from that project. However, `mri-toolkit` is designed to be more modular and extensible, with a focus on providing a user-friendly command-line interface (CLI) for common MRI processing tasks.
 
 ## Installation
 
+You can install `mri-toolkit` with `pip` using
 ```bash
 pip install mritk
+```
+Note that in order to use the `show` and `napari` command you would need to install some extra dependencies using `pip install mritk[show]` and `pip install mritk[napari]` respectively.
+
+You can also install `mri-toolkit` with conda
+```bash
+conda install -c conda-forge mritk
 ```
 
 ## Documentation
@@ -44,7 +51,7 @@ To get started with `mri-toolkit`, you can use the command-line interface (CLI) 
 - Data Management: Utilities to download datasets.
 
 ## Contributing
-Contributions to `MRI-toolkit` are welcome! If you have an idea for a new feature, improvement, or bug fix, please open an issue or submit a pull request on GitHub. For more details on how to contribute, please see the [Contributing Guide](CONTRIBUTING.md).
+Contributions to `mri-toolkit` are welcome! If you have an idea for a new feature, improvement, or bug fix, please open an issue or submit a pull request on GitHub. For more details on how to contribute, please see the [Contributing Guide](CONTRIBUTING.md).
 
 ## License
-`MRI-toolkit` is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+`mri-toolkit` is licensed under the MIT License. See the [LICENSE](LICENSE) file for more information.
