@@ -456,15 +456,30 @@ class CSFSegmentation:
     def to_csf_segmentation(self) -> MRIData:
         """Generates a new MRIData object containing only the CSF-labeled
         voxels from the original segmentation."""
-        # Get interpolation operator
-        I, J, K = np.where(self.segmentation.mri.data != 0)
-        interp = scipy.interpolate.NearestNDInterpolator(np.array([I, J, K]).T, self.segmentation.mri.data[I, J, K])
-        # Interpolate segmentation values at CSF mask locations
-        i, j, k = np.where(self.csf_mask.data != 0)
-        csf_seg = np.zeros_like(self.segmentation.mri.data, dtype=np.int16)
-        csf_seg[i, j, k] = interp(i, j, k)
 
-        return MRIData(data=csf_seg.astype(np.int16), affine=self.csf_mask.affine)
+        return extrapolate_labels_to_csf(self.segmentation, self.csf_mask)
+
+
+def extrapolate_labels_to_csf(parenchyma_seg: Segmentation, csf_mask: MRIData) -> MRIData:
+    """Extrapolates ROI labels from parenchyma segmentation to CSF mask.
+    CSF voxels are labeled using a nearest neighbour interpolator.
+
+    Args:
+        parenchyma_seg (Segmentation): Parenchyma segmentation (FreeSurfer or similar)
+        csf_mask (MRIData): cerebrospinal fluid mask
+
+    Returns:
+        MRIData: Object containing labeled CSF voxels
+    """
+    # Get interpolation operator
+    I, J, K = np.where(parenchyma_seg.mri.data != 0)
+    interp = scipy.interpolate.NearestNDInterpolator(np.array([I, J, K]).T, parenchyma_seg.mri.data[I, J, K])
+    # Interpolate segmentation values at CSF mask locations
+    i, j, k = np.where(csf_mask.data != 0)
+    csf_seg = np.zeros_like(parenchyma_seg.mri.data, dtype=np.int16)
+    csf_seg[i, j, k] = interp(i, j, k)
+
+    return MRIData(data=csf_seg.astype(np.int16), affine=csf_mask.affine)
 
 
 def default_segmentation_groups() -> dict[str, list[int]]:
