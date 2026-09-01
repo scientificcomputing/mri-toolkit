@@ -92,10 +92,8 @@ and save them as new NIfTI files with the same affine as the original image.
 
 ```python
 concentration_files = list(
-        sorted(
-            (mri_data_dir / "mri-processed/mri_processed_data/sub-01/concentrations").glob("sub-01_ses-0*_concentration.nii.gz")
-        )
-    )
+    sorted((mri_data_dir / "mri-processed/mri_processed_data/sub-01/concentrations").glob("sub-01_ses-0*_concentration.nii.gz"))
+)
 ```
 
 ```python
